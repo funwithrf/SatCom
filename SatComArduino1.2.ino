@@ -1,6 +1,6 @@
 /*THE FOLLOWING PROGRAM IS AVAILABLE FOR FREE DISTRIBTION.
 CREDIT: KEVIN MATTISON (KM6WUM), CAROLINA BIANCHINI MATTISON, KEN LAUER, OTHERS.
-DISCLAIMER: FOR EDUCATIONAL USE ONLY. USE AT YOUR OWN RISK.
+Disclaimer: FOR EDUCATIONAL USE ONLY. USE AT YOUR OWN RISK.
 THE SAMPLE CODE IS PROVIDED AS IS AND ANY EXPRESS OR IMPLIED 
 WARRANTIES, INCLUDING THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL CONTRIBUTORS
@@ -37,16 +37,12 @@ LSM9DS1 imu;
 #define LSM9DS1_M  0x1C // Would be 0x1C if SDO_M is LOW
 #define LSM9DS1_AG  0x6B // Would be 0x6A if SDO_AG is LOW
 
-// defined for mag not being used
-//#define DECLINATION 13.27 
-//Declination (degrees) in SF
 
 // for pitch only sensor
 int pitchint = 0;
 
 #define LOGO16_GLCD_HEIGHT 128 
 #define LOGO16_GLCD_WIDTH  64 
-//SPLASH BITMAP GRAPHIC IF DESIRED
 static const unsigned char PROGMEM logo16_glcd_bmp[] = {
 
 };
@@ -168,7 +164,7 @@ Timer<1, micros> u_timerCalback; //move the motor a bit to move out of the cal l
 int movetime = 0;
 int movetimeEl = 0;
 int movetimeCal = 30000;
-int movetimeCalback = 4000;
+int movetimeCalback = 2000;
 int calculatedmovetime = 0;
 
 int viewDiag = 1;
@@ -258,7 +254,7 @@ if(!mag.begin())
   // Since the buffer is intialized with an Adafruit splashscreen
   // internally, this will display the splashscreen.
   display.display();
-  delay(1000);
+  //delay(1000);
 
   // Clear the buffer.
   display.clearDisplay();
@@ -266,7 +262,7 @@ if(!mag.begin())
     // big bitmap display
   display.drawBitmap(0, 0, logo16_glcd_bmp, 128, 64, 1);
   display.display();
-  delay(1000);
+  //delay(1000);
 display.clearDisplay();
   
   // draw a bitmap icon and 'animate' movement
@@ -291,6 +287,10 @@ display.clearDisplay();
  digitalWrite(Output41, HIGH); // Beam Moving
 }
 
+
+
+/////////////////////////////////END SETUP///////////////////////////////////////
+
 void loop() {
 
  AzCurrentPos = analogRead(AzCurrentPosPin);
@@ -298,10 +298,12 @@ void loop() {
  ElCurrentPos = analogRead(ElCurrentPosPin);
  ElCurrentNeg = analogRead(ElCurrentNegPin);
 
+// if keeplooping is cleared, then check the Az and El
 if (keeplooping == 0){
-CheckAzEl();
+ CheckAzEl();
 }
 
+// if keeplooping high then keep moving
 if (keeplooping == 1){
   Moving();
 }
@@ -313,6 +315,7 @@ if (CWLimit == 11111){
  Input22State = digitalRead(Input22);
  Input23State = digitalRead(Input23);
  digitalWrite(Output40, HIGH); // LED Arduino Program OK
+
 
 if (four == 1) {
  MoveCalc(); 
@@ -327,65 +330,31 @@ if (seven == 1) {
  MoveCalc();  
 }
 
-DisplayUpdate();
-
-// *****************USB serial port****************************
-  
-  while (Serial.available() > 0) {
-
-    // look for the next valid integer in the incoming serial stream:
-    one = Serial.parseFloat();
-    // do it again:
-    two = Serial.parseFloat();
-    // do it again:
-    three = Serial.parseInt();
-    // do it again:
-    four = Serial.parseInt();
-    // do it again:
-    five = Serial.parseInt();
-    // do it again:
-    six = Serial.parseInt();
-    // do it again:
-    seven = Serial.parseInt();
-    // and again:
-    eight = Serial.parseInt();
-    // and again:
-    nine = Serial.parseInt();
-    // look for the newline. That's the end of your sentence:
-    if (Serial.read() == '\n') {
-      
-      Serial.print(one);
-      Serial.print(two);
-      Serial.print(three);
-      Serial.print(four);
-      Serial.print(five);
-      Serial.print(six);
-      Serial.print(seven);
-      Serial.print(eight);
-      Serial.print(nine);
-      
-    }// end reading carriage return serial data
-  AzTarget = one;
-  ElTarget = two;
-  Mode = three;
-  } // end reading new serial data
-    
- DisplayUpdate();
+//Read USB data
+ ReadSerialData();
 
 // time for Az Move
-MoveTimeBase = eight;
+// now calculated in calibration routine
+//MoveTimeBase = eight;
 
 // time for El Move
-MoveTimeBaseEl = nine;
+// now calculated in calibration routine
+//MoveTimeBaseEl = nine;
 
 // check for valid data that the beam can safely move to
 if (one < 0){
-  one = AzTargetPrev;
+//  one = AzTargetPrev;
+//one = 1;
   ProgStatus = "oneissue1";
+  DisplayUpdate();
+delay(100);
 }
 if (one > 359){
-  one = AzTargetPrev;
+ // one = AzTargetPrev;
+ //one = 359;
   ProgStatus = "oneissue2";
+  DisplayUpdate();
+delay(100);
 }
 
 if (two < 1){
@@ -401,11 +370,28 @@ if (ElTarget < 1){
   ElTarget = 0;
 }
 
+NewTarget();
+}
+
+/////////////////////////////END LOOP///////////////////////////////
+
+
+// check to see if new target for Az El commanded
+void NewTarget() {
+
 /////////////////////////////////////////////////////////////////////////
  // If new Az target, Move Az
 if (Mode == 1){
 if ((AzTarget != AzTargetPrev) && (ElMoving == 0)){
+// keep this here?
+//delete this code below after debug
 
+ProgStatus = AzTarget;
+DisplayUpdate();
+delay(100);
+ProgStatus = AzTargetPrev;
+DisplayUpdate();
+delay(100);
 // if zero is included in the Az calibration then map points accordingly
 if (ZeroCrossing == 1){
 
@@ -416,6 +402,7 @@ AzTargetPrev = one;
   if (viewDiag == 1) {
   Serial.print("AzTarget Out of Bounds check");
   DisplayUpdate();
+delay(100);
   StopMove();
 }
 }
@@ -429,6 +416,8 @@ if (AzTarget < CWLimit || AzTarget == 0){
   Serial.print("AzTarget mapped2b: ");
 Serial.println(AzTarget);
 ProgStatus = "mapped2b";
+DisplayUpdate();
+delay(100);
    }
 }
 else if (AzTarget > CWLimit){
@@ -438,6 +427,8 @@ else if (AzTarget > CWLimit){
 Serial.print("AzTarget mapped1a: ");
 Serial.println(AzTarget);
 ProgStatus = "mapped1a";
+DisplayUpdate();
+delay(100);
   }
 }
 } //end zero crossing is 1 mapping
@@ -452,6 +443,7 @@ AzTargetPrev = AzTarget;
   if (viewDiag == 1) {
   Serial.print("AzTarget Out of Bounds check no 0 cross");
   DisplayUpdate();
+delay(100);
   StopMove();
 }
 }
@@ -459,23 +451,29 @@ AzTargetPrev = AzTarget;
   AzMoving = 1;
   AzTargetPrev = AzTarget;
   ProgStatus = "MovingAz";
+  DisplayUpdate();
+delay(100);
    if (viewDiag == 1) {Serial.println("Az first time run MoveCalc");
    }
   MoveCalc();
   }
 
-if ((AzMoving > 0) && (AzMoving < 4) && (StopMoveTrack == 1)){
+if ((AzMoving > 0) && (AzMoving < 3) && (StopMoveTrack == 1)){
   if (viewDiag == 1) {Serial.println("Az run MoveCalc");
   }
   ProgStatus = "MoveAzG";
+  DisplayUpdate();
+delay(100);
   MoveCalc();
 }
 
-if (AzMoving >= 4){
+if (AzMoving >= 2){
   AzMoving = 0;
   if (viewDiag == 1) {Serial.println("Az Max corrections now to 0");
   }
   ProgStatus = "MoveAzD";
+  DisplayUpdate();
+delay(100);
   StopMove();
 }
 // If new El target, Move El
@@ -483,18 +481,20 @@ if ((ElTarget != ElTargetPrev) && (AzMoving == 0)){
   ElMoving = 1;
   ElTargetPrev = ElTarget;
   ProgStatus = "MovingEl";
+  DisplayUpdate();
+delay(100);
  if (viewDiag == 1) { Serial.println("El first time run MoveCalc");
  }
   MoveCalc();
   }
 
-if ((ElMoving > 0) && (ElMoving < 4) && (StopMoveTrack == 1)){
+if ((ElMoving > 0) && (ElMoving < 2) && (StopMoveTrack == 1)){
   if (viewDiag == 1) {Serial.println("El run MoveCalc");
   }
   MoveCalc();
   }
 
-if (ElMoving >= 4){
+if (ElMoving >= 2){
   ElMoving = 0;
   if (viewDiag == 1) {Serial.println("El Max corrections now to 0");
   }
@@ -504,6 +504,8 @@ if (ElMoving >= 4){
 }
 
 }
+
+/////////////////////////////////////////////////////////////////////
 
 void DisplayUpdate() {
 
@@ -524,10 +526,13 @@ void DisplayUpdate() {
   
 }
 
-// calculates how many degrees needed to move then how much time needed to power motor to get there.
+// calculates how many degrees needed to move, the direction, and how much time needed to power motor to get there.
+
 void MoveCalc() {
+  //AzTargetPrev = AzTarget; //does this Need to be here and repeated elsewhere troubleshoot
+delay(100); // settle time.
 CheckAzEl();
-delay(1000);
+delay(100); // settle time.
 if (Mode == 0) {
   movetimeEl = 5000; // time in mS
 timerEl.in(movetimeEl, StopMove);
@@ -577,6 +582,8 @@ if (ElMoving == 1) {
 }
 
 // calculate how long each El step took and calculate new time base for next move
+///////// calculation moved to initial calibration routine. same time used thereafter.
+////////////////////////////////////////////////////////////////////////////////////
 if (ElMoving > 1) {
   
   deltaEl = curEl - prevEl;
@@ -594,8 +601,11 @@ if (ElMoving > 1) {
 }
 
 // check for calculation outcome being very wrong
-if (MoveTimeBaseEl > 10000) {
-  MoveTimeBaseEl = 100;
+if (MoveTimeBaseEl > 5000) {
+  MoveTimeBaseEl = 1000;
+}
+if (MoveTimeBaseEl < 1) {
+  MoveTimeBaseEl = 1000;
 }
 
 // Move Elevation +
@@ -707,6 +717,9 @@ if (viewDiag == 1) {
 
 // check for calculation outcome being very wrong
 if (MoveTimeBase > 10000) {
+  MoveTimeBase = 100;
+}
+if (MoveTimeBase < 1) {
   MoveTimeBase = 100;
 }
 
@@ -837,29 +850,33 @@ void StopMove() {
  }
  StopMoveTrack = 1;
  keeplooping = 0;
- // If Az has tried to correct more than 3 times, stop attempting to move
-if (AzMoving > 3){
+ // If Az has tried to correct more than 1 times, stop attempting to move
+if (AzMoving > 2){
   AzMoving = 0;
   StopMoveTrack = 0;
   if (viewDiag == 1) {
   Serial.println("Max AzMoving in StopMove Routine");
   }
   }
- if (ElMoving > 3){
+ if (ElMoving > 2){
   ElMoving = 0;
   StopMoveTrack = 0;
   if (viewDiag == 1) {
   Serial.println("Max ElMoving in StopMove Routine");
   }
   }
-  delay(1000);
+  delay(100);
 ProgStatus = "StopMove";
  CheckAzEl();
 
 }
 
-void Moving(){
+void Moving() {
 
+//Read USB to keep buffer from filling
+  ReadSerialData();
+
+// check for excessive current draw
   if (AzCurrentPos > 545) {
     if (viewDiag == 1) {
 Serial.println("Az Current Pos Draw Stop: ");
@@ -928,7 +945,8 @@ if (pitchint < 0) {
 }
 }
 
-void CheckAzEl(){
+
+void CheckAzEl() {
    // if there's any serial available, read it:
  /* Get a new sensor event */ 
   sensors_event_t event; 
@@ -940,16 +958,21 @@ void CheckAzEl(){
 //float xoffset = 0.02;
 //float yoffset = -7;
 
-float xoffset = 0.45;
-float yoffset = -7.36;
+//working early 2021.
+//float xoffset = 0.45;
+//float yoffset = -7.36;
+
+float xoffset = -0.73;
+float yoffset = -7.23;
 
 float heading = atan2(event.magnetic.y - yoffset, event.magnetic.x - xoffset);
   
   // Once you have your heading, you must then add your 'Declination Angle', which is the 'Error' of the magnetic field in your location.
   // Find yours here: http://www.magnetic-declination.com/
-  // Mine is: -13* 2' W, which is ~13 Degrees, or (which we need) 0.22 radians
+  // Mountain View CA was: -13* 2' W, which is ~13 Degrees, or (which we need) 0.22 radians
+  // Fargo ND is: +4.71 degrees or 0.08 radian
   // If you cannot find your Declination, comment out these two lines, your compass will be slightly off.
-  float declinationAngle = 0.23;
+  float declinationAngle = -0.08;
   heading += declinationAngle;
   
   // Correct for when signs are reversed.
@@ -1018,12 +1041,60 @@ DisplayUpdate();
  //delay(2000);
 }
 
-void CalLimits(){
+void ReadSerialData() {
+// *****************USB serial port****************************
+
+  while (Serial.available() > 0) {
+
+    // look for the next valid integer in the incoming serial stream:
+    one = Serial.parseFloat();
+    // do it again:
+    two = Serial.parseFloat();
+    // do it again:
+    three = Serial.parseInt();
+    // do it again:
+    four = Serial.parseInt();
+    // do it again:
+    five = Serial.parseInt();
+    // do it again:
+    six = Serial.parseInt();
+    // do it again:
+    seven = Serial.parseInt();
+    // and again:
+    eight = Serial.parseInt();
+    // and again:
+    nine = Serial.parseInt();
+    
+    
+    // look for the newline. That's the end of your sentence:
+    if (Serial.read() == '\n') {
+      
+      Serial.print(one);
+      Serial.print(two);
+      Serial.print(three);
+      Serial.print(four);
+      Serial.print(five);
+      Serial.print(six);
+      Serial.print(seven);
+      Serial.print(eight);
+      Serial.print(nine);
+      
+    }// end reading carriage return serial data
+    
+    //Populate mapped serial data to targets and modes
+    AzTarget = one;
+    ElTarget = two;
+    Mode = three;
+}
+DisplayUpdate();
+}
+
+void CalLimits() {
 
 if (BypassCal == 0){
   // declare calibration in progress
 CalInProgress == 1;
-ProgStatus = "CalInProg";
+ProgStatus = "CalAzNeg";
 DisplayUpdate();
 
 // Now Move Az counterclockwise all the way to the hard limit in the motor circuit
@@ -1031,15 +1102,43 @@ timerCal.in(movetimeCal, StopMove);
 AzMoveNeg();
 CheckAzEl();
 CCWLimit = curAz;
-
+ProgStatus = "CalAzPos";
+DisplayUpdate();
 // Now Move Az clockwise all the way to the hard limit in the motor circuit
 timerCal.in(movetimeCal, StopMove);
 AzMovePos();
 CheckAzEl();
 CWLimit = curAz;
+// Move Az neg to back off of hard limit. 
+// and calculate move time per degree of Az move.
+prevAz = curAz;
+ProgStatus = "CalAzClc";
+DisplayUpdate();
 timerCalback.in(movetimeCalback, StopMove);
 AzMoveNeg();
+delay(100);
 CheckAzEl();
+
+deltaAz = curAz - prevAz;
+
+if (curAz > 330 && prevAz < 30) {
+  deltaAz = 360-curAz + prevAz;
+}
+  
+  if (deltaAz < 0) {
+    deltaAz = prevAz - curAz;
+  }
+  if (deltaAz == 0) {
+    deltaAz = 1;
+  }
+  
+  MoveTimeBase = movetimeCalback / deltaAz;
+ProgStatus = "TimeAz";
+DisplayUpdate();
+delay(100);
+ProgStatus = MoveTimeBase;
+DisplayUpdate();
+delay(1000);
 } // end if for checking whether bypass cal disabled
 // if wanting to bypass Az limit calibration set them manually as listed below
 if (BypassCal == 1){
@@ -1054,6 +1153,8 @@ ProgStatus = "CalGood";
  if (Gap < 10){
  CalInProgress = 5; // Failed calibration 
  ProgStatus = "CalFail";
+ DisplayUpdate();
+ delay(100);
  }
 
 // Check for 0 degrees being included in calibration range
@@ -1064,6 +1165,51 @@ else {
  ZeroCrossing = 0;  // decide on mapping based on this 
 }
 
+
+// calculate the time it takes for Elevation degrees chnage per second of move time
+  CheckAzEl();
+  ProgStatus = "CalElClc";
+DisplayUpdate();
+  prevEl = curEl; // the elevation read right now will be compared to the elevation read after a second
+timerCalback.in(movetimeCalback, StopMove);
+ElMovePos();
+delay(100);
+CheckAzEl();
+  deltaEl = curEl - prevEl;
+  if (deltaEl < 0) {
+    deltaEl = prevEl - curEl;
+  }
+  if (deltaEl == 0) {
+    deltaEl = 1;
+  }
+  // result calculated amount of move time per degree
+  MoveTimeBaseEl = movetimeCalback / deltaEl;
+
+ // MoveTimeBaseElPrev = MoveTimeBaseEl;
+ // prevEl = curEl;
+ProgStatus = "TimeEl";
+DisplayUpdate();
+delay(100);
+ProgStatus = MoveTimeBaseEl;
+DisplayUpdate();
+delay(100);
+ProgStatus = "CalElAdj";
+DisplayUpdate();
+CheckAzEl();
+if (curEl < 0) {
+  ElTarget = 10;
+      movetimeEl = (ElTarget - curEl) * MoveTimeBaseEl;
+  timerEl.in(movetimeEl, StopMove);
+  ElMovePos();
+}
+if (curEl > 15) {
+    ElTarget = 10;
+      movetimeEl = (curEl - ElTarget) * MoveTimeBaseEl;
+  timerEl.in(movetimeEl, StopMove);
+  ElMoveNeg();
+}
+ProgStatus = "CalDone";
+DisplayUpdate();
  // Print to serial if in diag mode
 if (viewDiag == 1) {
   Serial.println("Gap:");
@@ -1076,5 +1222,9 @@ if (viewDiag == 1) {
   Serial.println(ProgStatus);
   Serial.print("ZeroCross:");
   Serial.println(ZeroCrossing);
+    Serial.print("MoveTimeBase:");
+  Serial.println(MoveTimeBase);
+    Serial.print("MoveTimeBaseEl:");
+  Serial.println(MoveTimeBaseEl);
   }
 }
